@@ -4,9 +4,11 @@ from fastapi import (
     FastAPI,
     Request
 )
+
 from starlette.responses import StreamingResponse
 import json
 from time import time 
+from fastapi.responses import JSONResponse
 
 app = FastAPI(
     title = "TM API",
@@ -70,5 +72,48 @@ async def root(request: Request):
         }
         yield f"data: {json.dumps(json_data)}\n\n"
     
-    return StreamingResponse(event_stream(), \
-                             headers={"Content-Type": "text/event-stream"})
+    async def event():
+        nonlocal chat_id
+        full_response = router.call_chain(active_sessions[chat_id])
+        json_data = {
+            "id": f"chatcmpl-{chat_id}",
+            "object": "chat.completion.chunk",
+            "created": f"{chat_time}",
+            "model": f"{model_name}",
+            "choices": [
+                {
+                    "index": 0,
+                    "message":{
+                        "role": "ai",
+                        "content": f"{full_response}",
+                        "refusal": None,
+                        "annotations": []
+                    },
+                    "logprobs": None,
+                    "finish_reason": "stop"
+                }
+            ],
+            "usage": {
+                "prompt_tokens": -1,
+                "completion_tokens": -1,
+                "total_tokens": -1,
+                "prompt_tokens_details": {
+                "cached_tokens": -1,
+                "audio_tokens": -1
+                },
+            },
+            "completion_tokens_details": {
+                "reasoning_tokens": -1,
+                "audio_tokens": -1,
+                "accepted_prediction_tokens": -1,
+                "rejected_prediction_tokens": -1
+                },
+            "service_tier": "default",
+        }
+        return json_data
+
+    if payload.get('stream', False):
+        return StreamingResponse(event_stream(), \
+                                headers={"Content-Type": "text/event-stream"})
+    else:
+        return JSONResponse(content = await event())
