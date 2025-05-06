@@ -26,10 +26,11 @@ class LM_Models():
         self._initialized = True
         # LANGUAGE MODEL
         self.openai_api_key = os.getenv("OPENAI_API_KEY")
-        self.openai_api_base = "http://localhost:8000/v1" if "USE_OPENAI" not in os.environ else None 
+        self.openai_api_base = "http://localhost:9090/v1" if "USE_OPENAI" not in os.environ else None 
         self.model_name = model_name if "MODEL_NAME" not in os.environ else os.getenv("MODEL_NAME")
         logging.info(f'Model[{self.model_name}], Base_URL[{self.openai_api_base}]')
         self._lm_model = ChatOpenAI(
+            base_url = self.openai_api_base,
             api_key = self.openai_api_key,
             model_name = self.model_name
         )
@@ -41,7 +42,7 @@ class LM_Models():
             for file in filenames:
                 if not os.path.exists(os.path.join(self.local_dir, file)):
                     hf_hub_download(self.repo_id, file, local_dir = self.local_dir)
-        self.embed_model = HuggingFaceEmbeddings(model_name = self.repo_id, \
+        self._embed_model = HuggingFaceEmbeddings(model_name = self.repo_id, \
                                                  model_kwargs = {'device': 'cpu'}, \
                                                  encode_kwargs = {'normalize_embeddings': True})
         

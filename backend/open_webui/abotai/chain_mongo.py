@@ -2,7 +2,7 @@ import re
 from chain_base import Chains, MIN_CHAT_HISTORY
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.output_parsers import StrOutputParser
-from langchain_chroma import Chroma
+from chroma_db import ChromaDB
 from langchain_core.documents import Document
 from pymongo import MongoClient
 from uuid import uuid4
@@ -31,10 +31,7 @@ Typical queries that involve keywords such as 'count', 'how many', 'errors', or 
         self._collection = self.client["LLMQueryAgent"]["Functional"]
         ## Retriever.
         self.all_lm_models = LM_Models()
-        self.chroma_db_dir = chroma_db_dir
-        self.vector_store = Chroma(collection_name = "ONE_SHOT_EXAMPLES", \
-                                   embedding_function = self.all_lm_models.embed_model, \
-                                   persist_directory = self.chroma_db_dir)
+        self.vector_store = ChromaDB(chroma_db_dir, self.one_shots()).vector_store
         self.retriver = self.vector_store.as_retriever(search_type="similarity", search_kwargs={"k": 1})
         ## BUILD LangChain 
         self.prompt()
@@ -69,7 +66,7 @@ Typical queries that involve keywords such as 'count', 'how many', 'errors', or 
     def __mongo_exec(self, ai_message):
         try:
             logging.info(f'AI mongo query: {ai_message}')
-            return f"""Executing AI mongo query: {ai_message} gives result:\n{eval(ai_message)}."""
+            return f"""Executing AI mongo query:\n{ai_message} gives result: {eval(ai_message)}."""
         except Exception as e:
             logging.error(f"Error in executing mongo query: {ai_message} | {e}")
             raise Exception(f"{ai_message} | {e}")
@@ -138,7 +135,10 @@ Typical queries that involve keywords such as 'count', 'how many', 'errors', or 
         self.chat_obj_hidden.insert_serialize(temp_hidden_history)
         return resp
     
-    def add_one_shots(self):
+    def one_shots(self):
+        '''
+        Contains a list of one shot examples.
+        '''
         examples = [
             Document(
                 page_content = """human: Count the number of errors with source as UDR?\n ai:self.collection.count_documents({"src": "UDR"})""",
@@ -147,8 +147,7 @@ Typical queries that involve keywords such as 'count', 'how many', 'errors', or 
                 page_content = """human: Display errors with destination as UDR?\nai: list(self.collection.find({"dst": "UDR"}))""",
                 metadata = {"source": "manual_tmittra"})
             ]
-        uuids = [str(uuid4()) for _ in range(len(examples))]
-        self.vector_store.add_documents(documents = examples, ids = uuids)
+        return examples
 
     def exec_query(self, query: str) -> str:
         '''
