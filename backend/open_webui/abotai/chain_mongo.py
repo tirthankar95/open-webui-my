@@ -169,4 +169,5 @@ if __name__ == "__main__":
     gr.ChatInterface(mongo_chain.call_chain, type = "messages").launch(share = False)
     # Query 1: Count the number of errors with destination as GNB?
     # Query 2: Display errors with destination as UDM?
+    # Query 3: Count how many errors are thre?
     # mongo_chain.exec_query("""list(self.collection.find({"dst": "UDM", "Error_Markers.type": "http2"}))""")

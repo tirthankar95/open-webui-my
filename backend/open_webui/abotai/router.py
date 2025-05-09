@@ -73,7 +73,7 @@ These are the chains you can use:
                 'content': ", ".join(function_calls)
             })
         self.chat_obj_hidden.insert_serialize(temp_hidden_history)
-        
+        logging.info(f'[PLAN] ------------> {function_calls}')
         for function_call in function_calls:
             if function_call == "Chain_Mongo":
                 logging.info(f'Calling Chain_Mongo with query: {query}')
