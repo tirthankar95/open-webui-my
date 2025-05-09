@@ -1,4 +1,4 @@
-from router import ChainRouter
+from Chains.chain_router import ChainRouter
 from uuid import uuid4
 from fastapi import (
     FastAPI,
@@ -30,16 +30,14 @@ async def root(request: Request):
     payload = await request.json()
     model_name = payload.get("model", "")
     messages = payload.get("messages", [])
-    last_message = messages[-1] if messages else None
-    last_query = last_message.get("content", "") if last_message else ""
     
     chat_id = str(uuid4())
     chat_time = int(time())
-    active_sessions[chat_id] = last_query
+    active_sessions[chat_id] = messages
     
     async def event_stream():
         nonlocal chat_id 
-        full_response = router.call_chain(active_sessions[chat_id])
+        full_response = router.call_chain(active_sessions[chat_id], [])
         for token in full_response.split(" "):
             json_data = {
                 "id": f"chatcmpl-{chat_id}",

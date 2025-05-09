@@ -1,13 +1,10 @@
-import re 
-from chain_base import Chains, MIN_CHAT_HISTORY
+from Chains.chain_base import Chains, MIN_CHAT_HISTORY
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.output_parsers import StrOutputParser
 from chroma_db import ChromaDB
 from langchain_core.documents import Document
 from pymongo import MongoClient
-from uuid import uuid4
 from typing import List, Dict
-from save_chat import Save_Chat
 import logging 
 import copy
 from models import LM_Models
@@ -21,10 +18,8 @@ class Chain_Mongo(Chains):
 It is specifically designed to interpret and convert human questions into appropriate MongoDB queries.
 Typical queries that involve keywords such as 'count', 'how many', 'errors', or similar fall under this class's scope.
 """
-    def __init__(self, session_id: str, chroma_db_dir: str = "LLM_MONGO_2") -> None:
+    def __init__(self, chroma_db_dir: str = "LLM_MONGO_2") -> None:
         super().__init__()
-        ## Get Chat Object
-        self.chat_obj_hidden = Save_Chat(collection_name = '[Train]')
         ## MongoDB connection
         host, port = "localhost", 27017
         self.client = MongoClient(f"mongodb://{host}:{port}/")
@@ -93,24 +88,13 @@ Typical queries that involve keywords such as 'count', 'how many', 'errors', or 
             output (str): The output string from the LLM chain.
         '''
         logging.info('-m' * 30 + '\n')
-        retry = MIN_CHAT_HISTORY
+        retry = MIN_CHAT_HISTORY//2
         resp = f"Retry limit exceeded."
-        temp_hidden_history = []
         history_static = copy.deepcopy(history)
+        original_query = query
         while retry:
-            history_to_take = history[-min(MIN_CHAT_HISTORY, len(history_static)):]
             try:
-                for msg in self.prmpt.invoke(self.__vector_retriver({"query": query, \
-                                                                     "history": history_to_take})).to_messages():
-                    temp_hidden_history.append({
-                        'role': msg.type, 
-                        'content': msg.content
-                        })
-                    history_static.append({
-                        'role': msg.type, 
-                        'content': msg.content
-                        })
-                resp = self.chain_fn.invoke({"query": query, "history": history_to_take})
+                resp = self.chain_fn.invoke({"query": query, "history": history_static})
                 retry = 0
             except Exception as ai_message_error:
                 ai_message, error = str(ai_message_error).split('|')
@@ -118,21 +102,14 @@ Typical queries that involve keywords such as 'count', 'how many', 'errors', or 
                 Manually adding histories for re-tries. 
                 This won't affect the main history which originates at the router. 
                 '''
-                temp_hidden_history.append({
-                    "role": "ai", 
-                    "content": f"{ai_message.strip()}"
-                    })
                 history_static.append({
                     "role": "ai", 
                     "content": f"{ai_message.strip()}"
                     })
-                query = f"Error: {error.strip()}.\nPlease rephrase your mongo query."
+                query =  f"""The MongoDB query you generated resulted in the following error when executed: "{error.strip()}".  
+Please analyze the error, fix the issue, and regenerate a corrected MongoDB query based on the original user request: "{original_query}".
+                """
                 retry -= 1
-        temp_hidden_history.append({
-                "role": "ai", 
-                "content": f"{resp.strip()}"
-            })
-        self.chat_obj_hidden.insert_serialize(temp_hidden_history)
         return resp
     
     def one_shots(self):
@@ -162,6 +139,7 @@ Typical queries that involve keywords such as 'count', 'how many', 'errors', or 
         except Exception as e:
             logging.info(str(e))
 
+
 if __name__ == "__main__":
     import gradio as gr 
     mongo_chain = Chain_Mongo(session_id="OneShot")
@@ -169,5 +147,5 @@ if __name__ == "__main__":
     gr.ChatInterface(mongo_chain.call_chain, type = "messages").launch(share = False)
     # Query 1: Count the number of errors with destination as GNB?
     # Query 2: Display errors with destination as UDM?
-    # Query 3: Count how many errors are thre?
+    # Query 3: Count how many errors are there?
     # mongo_chain.exec_query("""list(self.collection.find({"dst": "UDM", "Error_Markers.type": "http2"}))""")
