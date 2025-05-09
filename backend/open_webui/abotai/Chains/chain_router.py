@@ -12,6 +12,7 @@ logging.basicConfig(
 )
 from typing import List, Dict
 from abot_utils import match
+MAX_RESP_BEAUTIFY_LEN = 75000
 
 class ChainRouter(Chains):
     def __init__(self) -> None:
@@ -23,6 +24,7 @@ class ChainRouter(Chains):
         self.mongo_chain = Chain_Mongo()
         self.general_chain = Chain_General()
         self.chain_fn = self.prmpt | self.all_lm_models.lm_model | StrOutputParser()
+        self.chain_bn = self.prmpt_beautify | self.all_lm_models.lm_model | StrOutputParser()
 
     def prompt(self):
         '''
@@ -40,6 +42,21 @@ These are the chains you can use:
                 ("human", "{query}")
             ]
         )
+        self.prmpt_beautify = ChatPromptTemplate.from_messages([
+                    ("system", 
+                    """You are a helpful assistant specialized in formatting responses. 
+        The original response to the query "{query}" was:
+        {response}
+
+        Please improve the readability of the response:
+        - If it is JSON, format it with proper indentation.
+        - Use Markdown to structure the response where applicable (e.g., lists, headers).
+        - Add relevant emojis to make it more engaging, but keep it professional.
+        - Ensure overall clarity and neatness.
+        
+        Respond only with the formatted output. Avoid any introductory or explanatory statements."""
+                    )
+                ])
     
     def call_chain(self, query: str, history_un: List[Dict]) -> str:
         '''
@@ -59,11 +76,17 @@ These are the chains you can use:
         logging.info(f'[PLAN] ------------> {function_calls}')
         for function_call in function_calls:
             if function_call == "Chain_Mongo":
-                resp = self.mongo_chain.call_chain(user_query, history)
+                resp += self.mongo_chain.call_chain(user_query, history)
             else: # Chain_General(default) no check is needed as it's a fallback
-                resp = self.general_chain.call_chain(user_query, history)
+                resp += self.general_chain.call_chain(user_query, history)
         logging.info(f'[RESPONSE] ------------> {resp}')
-        return resp   
+        # I don't want to send too big of a response data to be beautified.
+        # Response from MongoDB to an user query can sometimes be very big.
+        if len(resp) > MAX_RESP_BEAUTIFY_LEN: return resp
+        return self.chain_bn.invoke({
+            "query": user_query,
+            "response": resp
+        })
         
 if __name__ == "__main__":
     import gradio as gr 

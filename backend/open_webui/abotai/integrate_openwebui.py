@@ -72,7 +72,7 @@ async def root(request: Request):
     
     async def event():
         nonlocal chat_id
-        full_response = router.call_chain(active_sessions[chat_id])
+        full_response = router.call_chain(active_sessions[chat_id], [])
         json_data = {
             "id": f"chatcmpl-{chat_id}",
             "object": "chat.completion.chunk",

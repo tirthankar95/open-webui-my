@@ -12,7 +12,6 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s'
 )
-
 class Chain_Mongo(Chains):
     """Chain_Mongo class handles human queries related to data retrieval from MongoDB.
 It is specifically designed to interpret and convert human questions into appropriate MongoDB queries.
@@ -110,7 +109,7 @@ Typical queries that involve keywords such as 'count', 'how many', 'errors', or 
 Please analyze the error, fix the issue, and regenerate a corrected MongoDB query based on the original user request: "{original_query}".
                 """
                 retry -= 1
-        return resp
+            return resp
     
     def one_shots(self):
         '''
