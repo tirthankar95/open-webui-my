@@ -16,6 +16,19 @@
               "9999",
               "--reload"
             ]
+        },
+        {
+            "name": "Mongo2SQL: Debugger",
+            "type": "debugpy",
+            "request": "launch",
+            "python": "/home/tirthankar-mittra/miniconda3/bin/python3",
+            "module": "uvicorn",
+            "args": [
+                "test_api:app",
+                "--port",
+                "9999",
+                "--reload"
+            ]
         }
     ]
 }
