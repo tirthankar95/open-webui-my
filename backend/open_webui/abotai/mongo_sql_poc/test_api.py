@@ -11,7 +11,7 @@ import logging
 logging.getLogger(__name__)
 
 app = FastAPI()
-mongo_db = ReadMongo(db_name="LLMQueryAgent", collection_name="Correlation")
+mongo_db = ReadMongo(db_name="LLMQueryAgent", collection_name="Functional")
 sql_db = InsertLog()
 
 @app.get("/artifacts/{artifact_id}")

@@ -9,6 +9,7 @@ from pathlib import Path
 from sqlalchemy import (
     Column,
     String,
+    BigInteger,
     create_engine,
 )
 from sqlalchemy.ext.declarative import declarative_base
@@ -34,12 +35,18 @@ DATABASE_URL = os.environ.get("DATABASE_URL", f"sqlite:///{DATA}/webui.db")
 
 # ORM Model
 class CorrelatedNode(Base):
-    __tablename__ = 'correlated_node'
-    src = Column(String, primary_key=True)
+    __tablename__ = 'functionalx'
+    id = Column(BigInteger, primary_key=True)
+    src = Column(String)
+    dst = Column(String)
+    protocol = Column(String)
 
 # Pydantic Model
 class CorrelatedNodeModel(BaseModel):
+    id: int
     src: str
+    dst: str
+    protocol: str
 
 # Setup engine and session
 engine = create_engine(DATABASE_URL, echo=False)
@@ -57,8 +64,13 @@ class InsertLog:
 
     def start(self, artifacts):
         try:
-            for artifact in artifacts:
-                correlated_node = CorrelatedNodeModel(src=artifact['src'])
+            for idx, artifact in enumerate(artifacts):
+                correlated_node = CorrelatedNodeModel(**{
+                    'id': idx,
+                    'src': artifact.get('src', 'NA'),
+                    'dst': artifact.get('dst', 'NA'),
+                    'protocol': artifact.get('protocol', 'NA')
+                })
                 result = CorrelatedNode(**correlated_node.model_dump())
                 self.session.add(result)
 

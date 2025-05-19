@@ -1,6 +1,6 @@
 from Chains.chain_base import Chains
 from Chains.chain_base import MIN_CHAT_HISTORY
-from Chains.chain_mongo import Chain_Mongo
+from Chains.chain_sql import Chain_Sql
 from Chains.chain_general import Chain_General
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.output_parsers import StrOutputParser
@@ -21,7 +21,7 @@ class ChainRouter(Chains):
         self.all_lm_models = LM_Models()
         self.prompt()
         ## Init Chains
-        self.mongo_chain = Chain_Mongo()
+        self.sql_chain = Chain_Sql()
         self.general_chain = Chain_General()
         self.chain_fn = self.prmpt | self.all_lm_models.lm_model | StrOutputParser()
         self.chain_bn = self.prmpt_beautify | self.all_lm_models.lm_model | StrOutputParser()
@@ -35,7 +35,7 @@ class ChainRouter(Chains):
                 ("system", f"""You are a planner responsible for determining which chains to invoke in order to solve a user's query.
 You are not allowed output anything else other than the chain names and the sequence in which they should be invoked.
 These are the chains you can use:
-1. {Chain_Mongo.__doc__}
+1. {Chain_Sql.__doc__}
 2. {Chain_General.__doc__}
 """),
                 MessagesPlaceholder(variable_name="history"),
@@ -75,13 +75,13 @@ These are the chains you can use:
         function_calls = match(function_calls)
         logging.info(f'[PLAN] ------------> {function_calls}')
         for function_call in function_calls:
-            if function_call == "Chain_Mongo":
-                resp += self.mongo_chain.call_chain(user_query, history)
+            if function_call == "Chain_Sql":
+                resp += self.sql_chain.call_chain(user_query, history)
             else: # Chain_General(default) no check is needed as it's a fallback
                 resp += self.general_chain.call_chain(user_query, history)
         logging.info(f'[RESPONSE] ------------> {resp}')
         # I don't want to send too big of a response data to be beautified.
-        # Response from MongoDB to an user query can sometimes be very big.
+        # Response from SQLite to an user query can sometimes be very big.
         if len(resp) > MAX_RESP_BEAUTIFY_LEN: return resp
         return self.chain_bn.invoke({
             "query": user_query,
