@@ -1,4 +1,5 @@
 from Chains.chain_router import ChainRouter
+from config import TABLE_PREFIX
 from uuid import uuid4
 from fastapi import (
     FastAPI,
@@ -19,6 +20,15 @@ active_sessions = {}
 router = ChainRouter()
 SYSTEM_FINGERPRINT = "fp_129a36352a"
 
+
+def create_table(chat_id: str):
+    """
+    Create the table in the database if it doesn't exist.
+    """
+    table_name = TABLE_PREFIX + chat_id
+
+
+
 @app.post("/chat/completions")
 async def root(request: Request):
     global active_sessions
@@ -31,7 +41,7 @@ async def root(request: Request):
     model_name = payload.get("model", "")
     messages = payload.get("messages", [])
     
-    chat_id = str(uuid4())
+    chat_id = str(uuid4()) # TBD replace with actual chat_id 
     chat_time = int(time())
     active_sessions[chat_id] = messages
     

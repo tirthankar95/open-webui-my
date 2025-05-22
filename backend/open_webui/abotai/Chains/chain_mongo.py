@@ -8,10 +8,17 @@ from typing import List, Dict
 import logging 
 import copy
 from models import LM_Models
+from config import (
+    MONGO_HOST, 
+    MONGO_PORT,
+    MONGO_COLLECTION,
+    MONGO_DOCUMENT
+)
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s'
 )
+
 class Chain_Mongo(Chains):
     """Chain_Mongo class handles human queries related to data retrieval from MongoDB.
 It is specifically designed to interpret and convert human questions into appropriate MongoDB queries.
@@ -20,9 +27,8 @@ Typical queries that involve keywords such as 'count', 'how many', 'errors', or 
     def __init__(self, chroma_db_dir: str = "LLM_MONGO_2") -> None:
         super().__init__()
         ## MongoDB connection
-        host, port = "localhost", 27017
-        self.client = MongoClient(f"mongodb://{host}:{port}/")
-        self._collection = self.client["LLMQueryAgent"]["Functional"]
+        self.client = MongoClient(f"mongodb://{MONGO_HOST}:{MONGO_PORT}/")
+        self._collection = self.client[MONGO_COLLECTION][MONGO_DOCUMENT]
         ## Retriever.
         self.all_lm_models = LM_Models()
         self.vector_store = ChromaDB(chroma_db_dir, self.one_shots()).vector_store

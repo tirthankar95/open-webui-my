@@ -17,15 +17,18 @@ from sqlalchemy import (
     create_engine,
     text
 )
+from config import (
+    TABLE_PREFIX,
+    SQL_PATH
+)
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s'
 )
 
 Base = declarative_base()
-DATA = Path(__file__).parent.parent / "data"
-DATABASE_URL = os.environ.get("DATABASE_URL", f"sqlite:///{DATA}/webui.db")
-TABLE_NAME = "functionalx"
+DATABASE_URL = os.environ.get("DATABASE_URL", f"sqlite:///{SQL_PATH}/webui.db")
+TABLE_NAME = TABLE_PREFIX + "x"
 
 class Chain_Sql(Chains):
     """
@@ -156,4 +159,4 @@ if __name__ == "__main__":
 
     # TEST 2 ~ Works 
     # Count the number of errors with destination as GNB?
-    # print(sql_chain.call_chain("Count the number of errors with destination as GNB?", []))
+    print(sql_chain.call_chain("Count the number of errors with destination as GNODEB?", []))

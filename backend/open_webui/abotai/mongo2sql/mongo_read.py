@@ -3,7 +3,12 @@ Connect to MongoDB and return
 all data with an artifact id.
 '''
 from pymongo import MongoClient 
-from typing import Union
+from config import (
+    MONGO_HOST, 
+    MONGO_PORT,
+    MONGO_COLLECTION,
+    MONGO_DOCUMENT
+)
 import logging 
 logging.basicConfig(
     level=logging.INFO, 
@@ -14,14 +19,16 @@ logging.basicConfig(
 )
 
 class ReadMongo:
-    def __init__(self, host: str = "localhost", port: int = 27017, \
-                 db_name: Union[str, None] = None, collection_name: Union[str, None] = None):
+    def __init__(self):
         ## MongoDB collection
-        self.client = MongoClient(f"mongodb://{host}/{port}")
-        self.collection = self.client[db_name][collection_name]
+        self.client = MongoClient(f"mongodb://{MONGO_HOST}:{MONGO_PORT}/")
+        self._collection = self.client[MONGO_COLLECTION][MONGO_DOCUMENT]
     
     def fetch(self, artifact_id: str):
         query = {"job_id": artifact_id}
-        return list(self.collection.find(query))
+        return list(self._collection.find(query))
+    
 
-        
+if __name__ == '__main__':
+    robj = ReadMongo()
+    print(robj.fetch("2ff53e5525184d25959704498f044fe7"))
