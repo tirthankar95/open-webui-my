@@ -15,13 +15,13 @@ from abot_utils import match
 MAX_RESP_BEAUTIFY_LEN = 75000
 
 class ChainRouter(Chains):
-    def __init__(self) -> None:
+    def __init__(self, chat_id: str) -> None:
         super().__init__()
         ## Init LM models & prompt
         self.all_lm_models = LM_Models()
         self.prompt()
         ## Init Chains
-        self.sql_chain = Chain_Sql()
+        self.sql_chain = Chain_Sql(chat_id)
         self.general_chain = Chain_General()
         self.chain_fn = self.prmpt | self.all_lm_models.lm_model | StrOutputParser()
         self.chain_bn = self.prmpt_beautify | self.all_lm_models.lm_model | StrOutputParser()
@@ -33,7 +33,7 @@ class ChainRouter(Chains):
         self.prmpt = ChatPromptTemplate.from_messages(
             [
                 ("system", f"""You are a planner responsible for determining which chains to invoke in order to solve a user's query.
-You are not allowed output anything else other than the chain names and the sequence in which they should be invoked.
+Only print the chain names and the sequence in which they should be invoked.
 These are the chains you can use:
 1. {Chain_Sql.__doc__}
 2. {Chain_General.__doc__}
@@ -49,7 +49,7 @@ These are the chains you can use:
         {response}
 
         Please improve the readability of the response:
-        - If it is JSON, format it with proper indentation.
+        - If it is JSON, first try to present it in a table or sentence if not possible format it with proper indentation.
         - Use Markdown to structure the response where applicable (e.g., lists, headers).
         - Add relevant emojis to make it more engaging, but keep it professional.
         - Ensure overall clarity and neatness.

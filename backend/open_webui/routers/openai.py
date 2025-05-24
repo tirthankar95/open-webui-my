@@ -700,7 +700,7 @@ async def generate_chat_completion(
         r = await session.request(
             method="POST",
             url=url1,
-            data=payload,
+            data=form_data,
             headers={
                 "Authorization": f"Bearer {key}",
                 "Content-Type": "application/json",

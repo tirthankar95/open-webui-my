@@ -9,4 +9,6 @@ MONGO_DOCUMENT = "abot_ai_insights_stage"
 
 # SQL 
 SQL_PATH = Path(__file__).parent.parent.parent / "data"
-TABLE_PREFIX = "functional_"
+DPX_MAIN_TABLE = "main_"
+DPX_PROP_TABLE = "propagated_issues_"
+DPX_IMSI_TABLE = "imsi_issues_"

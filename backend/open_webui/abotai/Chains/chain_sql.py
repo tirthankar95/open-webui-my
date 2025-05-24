@@ -18,8 +18,10 @@ from sqlalchemy import (
     text
 )
 from config import (
-    TABLE_PREFIX,
-    SQL_PATH
+    SQL_PATH,
+    DPX_MAIN_TABLE,
+    DPX_PROP_TABLE,
+    DPX_IMSI_TABLE
 )
 logging.basicConfig(
     level=logging.INFO,
@@ -28,20 +30,21 @@ logging.basicConfig(
 
 Base = declarative_base()
 DATABASE_URL = os.environ.get("DATABASE_URL", f"sqlite:///{SQL_PATH}/webui.db")
-TABLE_NAME = TABLE_PREFIX + "x"
 
 class Chain_Sql(Chains):
+    """ You are part of a system that converts natural language questions into valid SQLite queries. 
+Your task is to accurately translate user questions—typically focused on analyzing PCAP (packet capture) and log data from computer networks—into correct and executable SQLite syntax.
+The natural language queries are often quantitative or statistical in nature. They may include phrases such as:
+"count", "how many", "average", "errors", "what are", "list all", "show top".
     """
-The Chain_Sql chain is responsible for translating natural language human queries to
-SQLite queries so that when this query is executed, related data is retrieved from the database.
-Typical natural language human queries are quantitative questions that involve keywords
-such as 'count', 'how many', 'average', or similar phrases.
-    """
-    def __init__(self, chroma_db_dir: str = "LLM_SQL") -> None:
+    def __init__(self, chat_id: str, chroma_db_dir: str = "LLM_SQL") -> None:
         super().__init__()
+        self.MAIN_TABLE = DPX_MAIN_TABLE + chat_id
+        self.PROP_TABLE = DPX_PROP_TABLE + chat_id
+        self.IMSI_TABLE = DPX_IMSI_TABLE + chat_id
         ## SQL connection
         self.session = create_engine(DATABASE_URL, echo=False).connect()
-        self.schema = self.session.execute(text(f"PRAGMA table_info({TABLE_NAME})")).fetchall()
+        self.schema = self.session.execute(text(f"PRAGMA table_info({self.MAIN_TABLE})")).fetchall()
         self.schema = "\n".join([' '.join([str(e) for e in row]) for row in self.schema])
         ## Retriever.
         self.all_lm_models = LM_Models()
@@ -80,7 +83,7 @@ such as 'count', 'how many', 'average', or similar phrases.
                 ("system", """You are an expert AI assistant specializing in generating efficient and accurate SQLite queries.""" + \
                    """The schema of the SQLite table is: {schema}.\nHere is an example of sql query interaction you must follow this assisstant response: {one_shot}.\n""" + \
                    """When returning a query, output only the query itself with no extra words or explanations or punctuations,""" + \
-                   """so that an human can directly run the command. Donot put a fullstop at the end of the query."""),
+                   """so that it can be directly executed. Donot put a fullstop at the end of the query."""),
                 MessagesPlaceholder(variable_name="history"),
                 ("human", "{query}")
             ]
@@ -126,11 +129,25 @@ Please analyze the error, fix the issue, and regenerate a corrected SQLite query
         '''
         examples = [
             Document(
-                page_content = f"""human: Count the number of errors with source as AMF?\nai: SELECT COUNT(*) FROM {TABLE_NAME} WHERE src LIKE 'AMF%';""",
-                metadata = {"source": "manual_tmittra"}),
+                page_content = f"""human: List out all errors by NGAP protocol?
+ai: SELECT protocol, inference AS error, pcap_insight AS detailed_error, COUNT(*) as error_frequency
+FROM {self.MAIN_TABLE}
+WHERE protocol = 'NGAP'
+GROUP BY error;""",
+                metadata = {"source": "tmittra"}),
             Document(
-                page_content = f"""human: Count the number of errors with destination as gNodeB?\nai: SELECT COUNT(*) FROM {TABLE_NAME} WHERE src LIKE 'gNodeB%';""",
-                metadata = {"source": "manual_tmittra"})
+                page_content = f"""human: What are the procedures that have error?
+ai: SELECT procedure, COUNT(*) as procedure_frequency
+FROM {self.MAIN_TABLE}
+GROUP BY procedure;""",
+                metadata = {"source": "tmittra"}),
+            Document(
+                page_content = f"""human: Were you able to detect any propagated or dependent errors? 
+ai: SELECT A.pcap_insight AS source_issue, B.pcap_insight AS propagated_issue
+FROM {self.MAIN_TABLE} as A 
+INNER JOIN propagated_issues as B
+ON A.id = B.source_issue;""",
+                metadata = {"source": "tmittra"})
             ]
         return examples
 
@@ -155,7 +172,7 @@ if __name__ == "__main__":
     # Query 3: Count how many errors are there?
     
     # TEST 1 ~ Works 
-    # sql_chain.exec_query(f"SELECT COUNT(*) FROM {TABLE_NAME} WHERE src LIKE 'AMF%';")
+    # sql_chain.exec_query(f"SELECT COUNT(*) FROM {} WHERE src LIKE 'AMF%';")
 
     # TEST 2 ~ Works 
     # Count the number of errors with destination as GNB?

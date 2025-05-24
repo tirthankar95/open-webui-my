@@ -1,15 +1,23 @@
-from Chains.chain_router import ChainRouter
-from config import TABLE_PREFIX
 from uuid import uuid4
 from fastapi import (
     FastAPI,
     Request
 )
-
-from starlette.responses import StreamingResponse
+import os 
 import json
 from time import time 
+from Chains.chain_router import ChainRouter
+from Mongo2Sql.table_creation import convert
+from config import (
+    SQL_PATH, 
+    DPX_MAIN_TABLE
+)
+from sqlalchemy import (
+    create_engine,
+    text
+)
 from fastapi.responses import JSONResponse
+from starlette.responses import StreamingResponse
 
 app = FastAPI(
     title = "TM API",
@@ -17,17 +25,17 @@ app = FastAPI(
     redoc_url = None, # Disable ReDoc
 )
 active_sessions = {}
-router = ChainRouter()
 SYSTEM_FINGERPRINT = "fp_129a36352a"
+DATABASE_URL = os.environ.get("DATABASE_URL", f"sqlite:///{SQL_PATH}/webui.db")
+conn = create_engine(DATABASE_URL, echo=False).connect()
 
-
-def create_table(chat_id: str):
-    """
-    Create the table in the database if it doesn't exist.
-    """
-    table_name = TABLE_PREFIX + chat_id
-
-
+def create_table(chat_id: str, job_id: str):
+    '''
+    Create the tales if it doesn't exist. 
+    '''
+    global conn
+    if not conn.execute(text(f"PRAGMA table_info({DPX_MAIN_TABLE + chat_id});")):
+        convert(chat_id, job_id)
 
 @app.post("/chat/completions")
 async def root(request: Request):
@@ -40,14 +48,19 @@ async def root(request: Request):
     payload = await request.json()
     model_name = payload.get("model", "")
     messages = payload.get("messages", [])
-    
-    chat_id = str(uuid4()) # TBD replace with actual chat_id 
+    metadata = payload.get("metadata", {})
+
+    chat_id = metadata.get("chat_id", "x")
+    job_id = metadata.get("job_id", "2ff53e5525184d25959704498f044fe7")
     chat_time = int(time())
-    active_sessions[chat_id] = messages
+    create_table(chat_id, job_id)
+    if chat_id not in active_sessions:
+        # Create a new rounter for chat_id if it doesn't exist in memory.
+        active_sessions[chat_id] = ChainRouter(chat_id)
     
     async def event_stream():
         nonlocal chat_id 
-        full_response = router.call_chain(active_sessions[chat_id], [])
+        full_response = active_sessions[chat_id].call_chain(messages, [])
         for token in full_response.split(" "):
             json_data = {
                 "id": f"chatcmpl-{chat_id}",
@@ -82,7 +95,7 @@ async def root(request: Request):
     
     async def event():
         nonlocal chat_id
-        full_response = router.call_chain(active_sessions[chat_id], [])
+        full_response = active_sessions[chat_id].call_chain(messages, [])
         json_data = {
             "id": f"chatcmpl-{chat_id}",
             "object": "chat.completion.chunk",
