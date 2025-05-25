@@ -32,8 +32,8 @@ Base = declarative_base()
 DATABASE_URL = os.environ.get("DATABASE_URL", f"sqlite:///{SQL_PATH}/webui.db")
 
 class Chain_Sql(Chains):
-    """ You are part of a system that converts natural language questions into valid SQLite queries. 
-Your task is to accurately translate user questions—typically focused on analyzing PCAP (packet capture) and log data from computer networks—into correct and executable SQLite syntax.
+    """Chain_Sql class converts natural language questions into valid SQLite queries. 
+This class accurately translate user questions—typically focused on analyzing PCAP (packet capture) and log data from computer networks—into correct and executable SQLite syntax.
 The natural language queries are often quantitative or statistical in nature. They may include phrases such as:
 "count", "how many", "average", "errors", "what are", "list all", "show top".
     """

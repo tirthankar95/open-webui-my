@@ -598,7 +598,10 @@ async def generate_chat_completion(
 
     payload = {**form_data}
     metadata = payload.pop("metadata", None)
-
+    payload['metadata'] = {
+        "user_id": metadata.get("user_id", None),
+        "chat_id": metadata.get("chat_id", None)
+    }
     model_id = form_data.get("model")
     model_info = Models.get_model_by_id(model_id)
 
@@ -700,7 +703,7 @@ async def generate_chat_completion(
         r = await session.request(
             method="POST",
             url=url1,
-            data=form_data,
+            data=payload,
             headers={
                 "Authorization": f"Bearer {key}",
                 "Content-Type": "application/json",

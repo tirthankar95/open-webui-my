@@ -18,6 +18,11 @@ from sqlalchemy import (
 )
 from fastapi.responses import JSONResponse
 from starlette.responses import StreamingResponse
+import logging 
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s'
+)
 
 app = FastAPI(
     title = "TM API",
@@ -29,12 +34,18 @@ SYSTEM_FINGERPRINT = "fp_129a36352a"
 DATABASE_URL = os.environ.get("DATABASE_URL", f"sqlite:///{SQL_PATH}/webui.db")
 conn = create_engine(DATABASE_URL, echo=False).connect()
 
+def sanitize(value: str) -> str:
+    value_arr = value.split("-")
+    return ''.join(value_arr)
+
 def create_table(chat_id: str, job_id: str):
     '''
     Create the tales if it doesn't exist. 
     '''
     global conn
-    if not conn.execute(text(f"PRAGMA table_info({DPX_MAIN_TABLE + chat_id});")):
+    resp = conn.execute(text(f"PRAGMA table_info({DPX_MAIN_TABLE + chat_id});")).fetchall()
+    if not resp:
+        logging.info(f"Creating tables: [{DPX_MAIN_TABLE + chat_id}]")
         convert(chat_id, job_id)
 
 @app.post("/chat/completions")
@@ -50,8 +61,8 @@ async def root(request: Request):
     messages = payload.get("messages", [])
     metadata = payload.get("metadata", {})
 
-    chat_id = metadata.get("chat_id", "x")
-    job_id = metadata.get("job_id", "2ff53e5525184d25959704498f044fe7")
+    chat_id = sanitize(metadata.get("chat_id", "x"))
+    job_id = sanitize(metadata.get("job_id", "2ff53e5525184d25959704498f044fe7"))
     chat_time = int(time())
     create_table(chat_id, job_id)
     if chat_id not in active_sessions:

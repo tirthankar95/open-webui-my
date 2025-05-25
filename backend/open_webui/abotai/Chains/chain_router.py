@@ -89,7 +89,6 @@ These are the chains you can use:
         })
         
 if __name__ == "__main__":
-    import gradio as gr 
-    router = ChainRouter()
+    router = ChainRouter("f0b01200b8ae417087950e0e8150c4e6")
     print(router.call_chain("What is the capital of France?"))
-    print(router.call_chain("Count the number of errors with destination as GNB?"))
+    print(router.call_chain("List out all errors by NGAP protocol?"))

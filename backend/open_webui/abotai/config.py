@@ -2,6 +2,7 @@ from pathlib import Path
 
 # MONGO RELATED CONFIG
 MONGO_HOST = "192.168.40.92"
+MONGO_HOST = "localhost"
 MONGO_PORT = 27017
 MONGO_COLLECTION = "abotai"
 MONGO_DOCUMENT = "abot_ai_insights_stage"
