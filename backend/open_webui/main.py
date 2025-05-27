@@ -1103,7 +1103,7 @@ async def chat_completion(
         metadata = {
             "user_id": user.id,
             "chat_id": form_data.pop("chat_id", None),
-            "job_id": form_data.pop("job_id", "e7caa77a355a45c8914c74a7487238ad"),
+            "job_id": form_data.pop("job_id", None),
             "message_id": form_data.pop("id", None),
             "session_id": form_data.pop("session_id", None),
             "tool_ids": form_data.get("tool_ids", None),

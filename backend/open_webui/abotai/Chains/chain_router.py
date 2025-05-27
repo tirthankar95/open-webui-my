@@ -33,10 +33,42 @@ class ChainRouter(Chains):
         self.prmpt = ChatPromptTemplate.from_messages(
             [
                 ("system", f"""You are a planner responsible for determining which chains to invoke in order to solve a user's query.
-Only print the chain names and the sequence in which they should be invoked.
+Only print the single chain name.
 These are the chains you can use:
 1. {Chain_Sql.__doc__}
 2. {Chain_General.__doc__}
+
+## SOME EXAMPLES TO GUIDE YOU ##
+human: List out all errors by ngap protocol. 
+ai: Chain_Sql
+
+
+human: Give me the list of errors occurred for <smf-pdusession> service?.
+ai: Chain_Sql
+
+human: What is the capital of France?
+ai: Chain_General
+
+human: What were the procedures that were having errors?
+ai: Chain_Sql
+
+human: On HTTPV2 protocol where there any error of 300 series? if so list them all.
+ai: Chain_Sql
+
+human: Tell me about 5G network.
+ai: Chain_General
+
+human: How many IMSI had Registration Failure? List them all.
+ai: Chain_Sql
+
+human: What was the most common error?
+ai: Chain_Sql
+
+human: Were you able to detect any propagated or dependent errors? Highlight me some of them.
+ai: Chain_Sql
+
+human: Explain the concept of PCAP:
+ai: Chain_General
 """),
                 MessagesPlaceholder(variable_name="history"),
                 ("human", "{query}")
@@ -54,7 +86,9 @@ These are the chains you can use:
         - Add relevant emojis to make it more engaging, but keep it professional.
         - Ensure overall clarity and neatness.
         
-        Respond only with the formatted output. Avoid any introductory or explanatory statements."""
+        Respond only with the formatted output. 
+        On top of the original response donot summarize, donot add additional information and donot provide next steps.
+        You could just add a single sentence like 'Here are the results:'"""
                     )
                 ])
     
@@ -71,15 +105,15 @@ These are the chains you can use:
         history, user_query = query[-(MIN_CHAT_HISTORY+1):-1], query[-1]['content']
         logging.info('-r' * 30 + '\n')
         logging.info(f'[QUERY] ------------> {user_query}')
-        function_calls = self.chain_fn.invoke({"query": user_query, "history": history})
-        function_calls = match(function_calls)
-        logging.info(f'[PLAN] ------------> {function_calls}')
+        function_calls_orig = self.chain_fn.invoke({"query": user_query, "history": history})
+        function_calls = match(function_calls_orig)
+        logging.info(f'[PLAN] ------------> {function_calls_orig}')
         for function_call in function_calls:
             if function_call == "Chain_Sql":
                 resp += self.sql_chain.call_chain(user_query, history)
             else: # Chain_General(default) no check is needed as it's a fallback
                 resp += self.general_chain.call_chain(user_query, history)
-        logging.info(f'[RESPONSE] ------------> {resp}')
+        logging.info(f'[RESPONSE] ------------> \n{resp}\n')
         # I don't want to send too big of a response data to be beautified.
         # Response from SQLite to an user query can sometimes be very big.
         if len(resp) > MAX_RESP_BEAUTIFY_LEN: return resp

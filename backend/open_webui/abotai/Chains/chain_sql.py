@@ -6,9 +6,10 @@ from langchain_core.documents import Document
 from typing import List, Dict
 import logging 
 import copy
-import os 
-from pathlib import Path
+import os
 from models import LM_Models
+import pandas as pd 
+from tabulate import tabulate
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import (
@@ -72,7 +73,12 @@ The natural language queries are often quantitative or statistical in nature. Th
     def __sql_exec(self, ai_message):
         try:
             logging.info(f'AI sql query: {ai_message}')
-            return f"""Executing AI sql query:\n{ai_message} gives result: {self.session.execute(text(ai_message)).fetchall()}."""
+            result = self.session.execute(text(ai_message))
+            result_df = pd.DataFrame(result.fetchall(), columns=result.keys())
+            pretty_result = tabulate(result_df, headers=result_df.columns, tablefmt="fancy_grid", showindex=False)
+            logging.info(f'[SQL QUERY] ------------> {ai_message}')
+            logging.info(f'[SQL RESULT] ------------> \n{pretty_result}\n')
+            return f"""{pretty_result}"""
         except Exception as e:
             logging.error(f"Error in executing sql query: {ai_message} | {e}")
             raise Exception(f"{ai_message} | {e}")
@@ -81,7 +87,7 @@ The natural language queries are often quantitative or statistical in nature. Th
         self.prmpt = ChatPromptTemplate.from_messages(
             [
                 ("system", """You are an expert AI assistant specializing in generating efficient and accurate SQLite queries.""" + \
-                   """The schema of the SQLite table is: {schema}.\nHere is an example of sql query interaction you must follow this assisstant response: {one_shot}.\n""" + \
+                   """Each entry in the row is an error. The schema of the SQLite table is: {schema}.\nHere is an example of sql query interaction you must follow this assisstant response: {one_shot}.\n""" + \
                    """When returning a query, output only the query itself with no extra words or explanations or punctuations,""" + \
                    """so that it can be directly executed. Donot put a fullstop at the end of the query."""),
                 MessagesPlaceholder(variable_name="history"),
@@ -134,20 +140,20 @@ ai: SELECT protocol, inference AS error, pcap_insight AS detailed_error, COUNT(*
 FROM {self.MAIN_TABLE}
 WHERE protocol = 'NGAP'
 GROUP BY error;""",
-                metadata = {"source": "tmittra"}),
+                metadata = {"source": "manual"}),
             Document(
                 page_content = f"""human: What are the procedures that have error?
 ai: SELECT procedure, COUNT(*) as procedure_frequency
 FROM {self.MAIN_TABLE}
 GROUP BY procedure;""",
-                metadata = {"source": "tmittra"}),
+                metadata = {"source": "manual"}),
             Document(
                 page_content = f"""human: Were you able to detect any propagated or dependent errors? 
 ai: SELECT A.pcap_insight AS source_issue, B.pcap_insight AS propagated_issue
 FROM {self.MAIN_TABLE} as A 
-INNER JOIN propagated_issues as B
+INNER JOIN {self.PROP_TABLE} as B
 ON A.id = B.source_issue;""",
-                metadata = {"source": "tmittra"})
+                metadata = {"source": "manual"})
             ]
         return examples
 
