@@ -599,8 +599,8 @@ async def generate_chat_completion(
     payload = {**form_data}
     metadata = payload.pop("metadata", None)
     payload['metadata'] = {
-        "user_id": metadata.get("user_id", None),
-        "chat_id": metadata.get("chat_id", None)
+        "job_id": metadata.get("job_id", "NA"),
+        "chat_id": metadata.get("chat_id", "NA")
     }
     model_id = form_data.get("model")
     model_info = Models.get_model_by_id(model_id)

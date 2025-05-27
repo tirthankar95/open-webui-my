@@ -143,10 +143,10 @@ def create_chat_table(chat_id: str, artefact_orig):
     (i.e., models you've defined using declarative_base()), such as:
     '''
     Base.metadata.create_all(bind=engine)
-    for doc in artefact_orig:
+    for idx_doc, doc in enumerate(artefact_orig):
         if "pcap" in doc and "prompt" in doc["pcap"]:
             artefact = copy.deepcopy(doc['pcap']['prompt'])
-            artefact_id = doc["job_id"]
+            artefact_id = doc["job_id"] + "_" + str(idx_doc)
             # Process temp_occurence_times
             temp_occurence_times = artefact.get('occurrence_times', [])
             for idx, x in enumerate(temp_occurence_times):

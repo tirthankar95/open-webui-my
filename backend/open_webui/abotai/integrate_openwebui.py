@@ -45,7 +45,7 @@ def create_table(chat_id: str, job_id: str):
     global conn
     resp = conn.execute(text(f"PRAGMA table_info({DPX_MAIN_TABLE + chat_id});")).fetchall()
     if not resp:
-        logging.info(f"Creating tables: [{DPX_MAIN_TABLE + chat_id}]")
+        logging.info(f"Creating tables: [{DPX_MAIN_TABLE + chat_id}] ~ job_id: [{job_id}]")
         convert(chat_id, job_id)
 
 @app.post("/chat/completions")
@@ -57,12 +57,12 @@ async def root(request: Request):
     so operations like parsing JSON from the body are I/O-bound and must be awaited.
     '''
     payload = await request.json()
-    model_name = payload.get("model", "")
+    model_name = payload.get("model", "NA")
     messages = payload.get("messages", [])
     metadata = payload.get("metadata", {})
 
-    chat_id = sanitize(metadata.get("chat_id", "x"))
-    job_id = sanitize(metadata.get("job_id", "2ff53e5525184d25959704498f044fe7"))
+    chat_id = sanitize(metadata.get("chat_id", "NA"))
+    job_id = sanitize(metadata.get("job_id", "NA"))
     chat_time = int(time())
     create_table(chat_id, job_id)
     if chat_id not in active_sessions:
