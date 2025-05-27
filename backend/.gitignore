@@ -8,6 +8,7 @@ _test
 Pipfile
 !/data
 !/data/readme.txt
+!/data/webui.db
 /data/*
 /open_webui/data/*
 .webui_secret_key
