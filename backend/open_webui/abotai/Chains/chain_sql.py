@@ -10,6 +10,15 @@ import os
 from models import LM_Models
 import pandas as pd 
 from tabulate import tabulate
+from config import (
+    SQL_PATH,
+    DPX_MAIN_TABLE,
+    DPX_PROP_TABLE,
+    DPX_IMSI_TABLE
+)
+from Chains.sql_table_details import (
+    fetch_table_details
+)
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import (
@@ -17,12 +26,6 @@ from sqlalchemy import (
     String,
     create_engine,
     text
-)
-from config import (
-    SQL_PATH,
-    DPX_MAIN_TABLE,
-    DPX_PROP_TABLE,
-    DPX_IMSI_TABLE
 )
 logging.basicConfig(
     level=logging.INFO,
@@ -45,8 +48,7 @@ The natural language queries are often quantitative or statistical in nature. Th
         self.IMSI_TABLE = DPX_IMSI_TABLE + chat_id
         ## SQL connection
         self.session = create_engine(DATABASE_URL, echo=False).connect()
-        self.schema = self.session.execute(text(f"PRAGMA table_info({self.MAIN_TABLE})")).fetchall()
-        self.schema = "\n".join([' '.join([str(e) for e in row]) for row in self.schema])
+        self.deepX_schema = fetch_table_details(self.MAIN_TABLE, self.PROP_TABLE, self.IMSI_TABLE)
         ## Retriever.
         self.all_lm_models = LM_Models()
         self.vector_store = ChromaDB(chroma_db_dir, self.one_shots()).vector_store
@@ -65,7 +67,7 @@ The natural language queries are often quantitative or statistical in nature. Th
         logging.info(f'one_shot: {fmt_docx}\n')
         logging.info(f'history: {history}\n')
         logging.info(f'query: {query}\n')
-        return {"schema": self.schema, \
+        return {"schema": self.deepX_schema, \
                 "one_shot": fmt_docx, \
                 "history": history, \
                 "query": query}
@@ -87,7 +89,7 @@ The natural language queries are often quantitative or statistical in nature. Th
         self.prmpt = ChatPromptTemplate.from_messages(
             [
                 ("system", """You are an expert AI assistant specializing in generating efficient and accurate SQLite queries.""" + \
-                   """Each entry in the row is an error. The schema of the SQLite table is: {schema}.\nHere is an example of sql query interaction you must follow this assisstant response: {one_shot}.\n""" + \
+                   """Here are the table details {schema}.\nHere is an example of sql query interaction you must follow this assisstant response: {one_shot}.\n""" + \
                    """When returning a query, output only the query itself with no extra words or explanations or punctuations,""" + \
                    """so that it can be directly executed. Donot put a fullstop at the end of the query."""),
                 MessagesPlaceholder(variable_name="history"),
@@ -138,7 +140,7 @@ Please analyze the error, fix the issue, and regenerate a corrected SQLite query
                 page_content = f"""human: List out all errors by NGAP protocol?
 ai: SELECT protocol, inference AS error, pcap_insight AS detailed_error, COUNT(*) as error_frequency
 FROM {self.MAIN_TABLE}
-WHERE protocol = 'NGAP'
+WHERE LOWER(protocol) = 'ngap'
 GROUP BY error;""",
                 metadata = {"source": "manual"}),
             Document(

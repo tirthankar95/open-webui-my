@@ -87,7 +87,7 @@ ai: Chain_General
         - Ensure overall clarity and neatness.
         
         Respond only with the formatted output. 
-        On top of the original response donot summarize, donot add additional information and donot provide next steps.
+        On top of the original response do not provide next steps or suggestions.
         You could just add a single sentence like 'Here are the results:'"""
                     )
                 ])
